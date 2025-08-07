@@ -5,7 +5,7 @@ This project implements a **secure login system** in Laravel using the **OAuth2*
 
 ## Features
 
-- OAuth2 Password Grant Flow (no Passport, custom implementation)
+- OAuth2 (no Passport, custom implementation)
 - JWT-based authentication
 - Secure access token & refresh token issuance
 - Refresh token rotation
