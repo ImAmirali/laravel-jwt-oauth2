@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Middleware\EnsureTokenIsValid;
 use Illuminate\Support\Facades\Route;
 
 
@@ -44,7 +45,7 @@ Route::group([
      * Endpoint: /api/auth/logout
      * Access: Authenticated (auth:api)
      */
-    Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api')->name('logout');
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
     /**
      * Refresh access token using a valid refresh token (stored in cookie).
@@ -53,13 +54,15 @@ Route::group([
      * Endpoint: /api/auth/refresh
      * Access: Authenticated (auth:api)
      */
-    Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('auth:api')->name('refresh');
+    Route::post('/refresh', [AuthController::class, 'refresh'])
+        ->middleware(['auth:api', EnsureTokenIsValid::class.':refresh'])->name('refresh');
 
     /**
      * Get the currently authenticated user's data.
-     * Method: POST
-     * Endpoint: /api/auth/me
+     * Method: GET
+     * Endpoint: /api/auth/user
      * Access: Authenticated (auth:api)
      */
-    Route::post('/me', [AuthController::class, 'me'])->middleware('auth:api')->name('me');
+    Route::get('/user', [AuthController::class, 'user'])
+        ->middleware(['auth:api',EnsureTokenIsValid::class.':access'])->name('user');
 });

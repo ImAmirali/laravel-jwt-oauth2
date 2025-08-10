@@ -73,11 +73,11 @@ class AuthController extends Controller
         ]);
         $credentials = $request->only('email', 'password');
 
-        if (!$accessToken = auth()->attempt($credentials)) {
+        if (!$accessToken = auth()->claims(['token_type' => 'access'])->attempt($credentials)) {
             return response()->json(['status' => 'error', 'message' => 'کاربری با این مشخصات ثبت نشده است!'], 401);
         }
 
-        $refreshToken = JWTAuth::claims(['refresh_token' => true])->fromUser(auth()->user());
+        $refreshToken = JWTAuth::claims(['token_type' => 'refresh'])->fromUser(auth()->user());
         $cookie = Cookie::make(
             'refresh_token',
             $refreshToken,
@@ -110,46 +110,31 @@ class AuthController extends Controller
      */
     public function refresh(Request $request): JsonResponse
     {
-        try {
-            $token = $request->cookie('refresh_token');
-            if (!$token) {
-                return response()->json(['error' => 'در کوکی وجود ندارد! refresh_token '], 401);
-            }
+        $token = $request->cookie('refresh_token');
+        $user = JWTAuth::toUser();
+        JWTAuth::invalidate($token);
 
-            JWTAuth::setToken($token);
+        $accessToken = JWTAuth::claims(['token_type' => 'access'])->fromUser($user);
+        $refreshToken = JWTAuth::claims(['token_type' => 'refresh'])->fromUser($user);
+        $cookie = Cookie::make(
+            'refresh_token',
+            $refreshToken,
+            config('jwt.refresh_ttl'),
+            null,
+            null,
+            true,
+            true,
+            false,
+            'Strict'
+        );
 
-            $payload = JWTAuth::getPayload();
-            if (!$payload->get('refresh_token')) {
-                return response()->json(['error' => 'refresh_token نامعتبر است!'], 401);
-            }
+        return response()->json([
+            'access_token' => $accessToken,
+            'token_type' => 'bearer',
+            'expires_in' => auth()->factory()->getTTL() * 60,
+            'user' => $user,
+        ])->withCookie($cookie);
 
-            $user = JWTAuth::toUser();
-            JWTAuth::invalidate($token);
-
-            $accessToken = JWTAuth::fromUser($user);
-            $refreshToken = JWTAuth::claims(['refresh_token' => true])->fromUser($user);
-            $cookie = Cookie::make(
-                'refresh_token',
-                $refreshToken,
-                config('jwt.refresh_ttl'),
-                null,
-                null,
-                true,
-                true,
-                false,
-                'Strict'
-            );
-
-            return response()->json([
-                'access_token' => $accessToken,
-                'token_type' => 'bearer',
-                'expires_in' => auth()->factory()->getTTL() * 60,
-                'user' => $user,
-            ])->withCookie($cookie);
-        }
-        catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
-            return response()->json(['error' => 'refresh_token منقضی شده است!'], 401);
-        }
     }
 
     /**
@@ -159,7 +144,7 @@ class AuthController extends Controller
      *
      * @return JsonResponse
      */
-    public function me(): JsonResponse
+    public function user(): JsonResponse
     {
         return response()->json(auth()->user());
     }
