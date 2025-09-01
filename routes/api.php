@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ProductController;
 use App\Http\Middleware\EnsureTokenIsValid;
 use Illuminate\Support\Facades\Route;
 
@@ -65,4 +66,72 @@ Route::group([
      */
     Route::get('/user', [AuthController::class, 'user'])
         ->middleware(['auth:api',EnsureTokenIsValid::class.':access'])->name('user');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Product API Routes
+|--------------------------------------------------------------------------
+|
+| All routes are grouped using the 'auth:api' middleware.
+| These endpoints handle CRUD operations for the products.
+| And get the categories and products in that category.
+*/
+Route::middleware('auth:api')->group(function () {
+    /**
+     * Get the Products
+     * Method: GET
+     * Endpoint: /api/products
+     */
+    Route::get('/products', [ProductController::class, 'index']);
+    /**
+     * Search by given name and return the products
+     * Method: GET
+     * Endpoint: /api/products/search
+     */
+    Route::get('/products/search', [ProductController::class, 'search']);
+    /**
+     * Get the list of categories
+     * Method: GET
+     * Endpoint: /api/products/category-list
+     */
+    Route::get('/products/category-list', [ProductController::class, 'categoryList']);
+    /**
+     * Get the categories
+     * Method: GET
+     * Endpoint: /api/products/categories
+     */
+    Route::get('/products/categories', [ProductController::class, 'categories']);
+    /**
+     * Get the Products by given category
+     * Method: GET
+     * Endpoint: /api/products/category/{Category_Name}
+     */
+    Route::get('/products/category/{category}', [ProductController::class, 'categoryProducts']);
+
+    /**
+     * Add a new product by given attributes
+     * Method: POST
+     * Endpoint: /api/products/add
+     */
+    Route::post('/products/add', [ProductController::class, 'store']);
+    /**
+     * Get the Product by given id
+     * Method: GET
+     * Endpoint: /api/products/{product_id}
+     */
+    Route::get('/products/{id}', [ProductController::class, 'show']);
+    /**
+     * update the product by given Product id
+     * Method: PUT
+     * Endpoint: /api/products/{product_id}
+     */
+    Route::put('/products/{id}', [ProductController::class, 'update']);
+    /**
+     * SoftDelete the Product by given id
+     * Method: DELETE
+     * Endpoint: /api/products/{product_id}
+     */
+    Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+
 });
