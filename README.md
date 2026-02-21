@@ -9,8 +9,8 @@ This project implements a **secure login system** in Laravel using the **OAuth2*
 - JWT-based authentication
 - Secure access token & refresh token issuance
 - Refresh token rotation
-- Secure storage via HTTP-only cookies (optional)
-- Multilingual validation and error messages (optional)
+- Secure storage via HTTP-only cookies
+- Multilingual validation and error messages
 
 ---
 
