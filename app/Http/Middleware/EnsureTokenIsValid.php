@@ -41,7 +41,7 @@ class EnsureTokenIsValid
             if ($expectedType === 'access') {
                 $user = JWTAuth::authenticate();
                 if (!$user) {
-                    return response()->json(['erroe' => 'کاربر پیدا نشد!']);
+                    return response()->json(['error' => 'کاربر پیدا نشد!']);
                 }
                 auth()->setUser($user);
             }

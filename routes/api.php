@@ -5,17 +5,90 @@ use App\Http\Controllers\ProductController;
 use App\Http\Middleware\EnsureTokenIsValid;
 use Illuminate\Support\Facades\Route;
 
+/**
+ * @OA\Info(
+ *     version="1.0.0",
+ *     title="Laravel API Documentation",
+ *     description="API for user auth and product management."
+ * )
+ * @OA\Server(
+ *     url="http://localhost:8000/api",
+ *     description="Local Server"
+ * )
+ * @OA\SecurityScheme(
+ *     securityScheme="bearerAuth",
+ *     type="http",
+ *     scheme="bearer",
+ *     bearerFormat="JWT"
+ * )
+ * @OA\Schema(
+ *     schema="Error",
+ *     @OA\Property(property="message", type="string", example="The given data was invalid."),
+ *     @OA\Property(property="errors", type="object")
+ * )
+ * @OA\Schema(
+ *     schema="User",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="name", type="string", example="John Doe"),
+ *     @OA\Property(property="email", type="string", example="john@example.com")
+ * )
+ * @OA\Schema(
+ *     schema="LoginRequest",
+ *     @OA\Property(property="email", type="string", example="john@example.com"),
+ *     @OA\Property(property="password", type="string", example="password123"),
+ *     required={"email", "password"}
+ * )
+ * @OA\Schema(
+ *     schema="RegisterRequest",
+ *     @OA\Property(property="name", type="string", example="John Doe"),
+ *     @OA\Property(property="email", type="string", example="john@example.com"),
+ *     @OA\Property(property="password", type="string", example="password123"),
+ *     required={"name", "email", "password"}
+ * )
+ * @OA\Schema(
+ *     schema="AuthResponse",
+ *     @OA\Property(property="access_token", type="string", example="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."),
+ *     @OA\Property(property="token_type", type="string", example="bearer"),
+ *     @OA\Property(property="expires_in", type="integer", example=3600),
+ *     @OA\Property(property="user", ref="#/components/schemas/User")
+ * )
+ * @OA\Schema(
+ *     schema="Product",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="name", type="string", example="Sample Product"),
+ *     @OA\Property(property="description", type="string", example="Description"),
+ *     @OA\Property(property="price", type="number", example=29.99),
+ *     @OA\Property(property="category", type="string", example="Electronics")
+ * )
+ * @OA\Schema(
+ *     schema="ProductRequest",
+ *     @OA\Property(property="name", type="string", example="Sample Product"),
+ *     @OA\Property(property="description", type="string", example="Description"),
+ *     @OA\Property(property="price", type="number", example=29.99),
+ *     @OA\Property(property="category", type="string", example="Electronics"),
+ *     required={"name", "price", "category"}
+ * )
+ * @OA\Schema(
+ *     schema="ProductListResponse",
+ *     @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Product")),
+ *     @OA\Property(property="current_page", type="integer", example=1),
+ *     @OA\Property(property="total", type="integer", example=50)
+ * )
+ * @OA\Schema(
+ *     schema="Category",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="name", type="string", example="Electronics")
+ * )
+ * @OA\Schema(
+ *     schema="CategoryListResponse",
+ *     @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Category"))
+ * )
+ */
 
 /*
 |--------------------------------------------------------------------------
 | Authentication API Routes
 |--------------------------------------------------------------------------
-|
-| All authentication-related routes are grouped under the 'auth' prefix
-| and use the 'api' middleware group (which includes JSON response formatting,
-| throttling, etc.). These endpoints handle registration, login, logout,
-| token refresh, and retrieving the authenticated user's info.
-|
 */
 
 Route::group([
@@ -24,45 +97,63 @@ Route::group([
 ], function ($router) {
 
     /**
-     * Register a new user.
-     * Method: POST
-     * Endpoint: /api/auth/register
-     * Access: Public
+     * @OA\Post(
+     *     path="/api/auth/register",
+     *     summary="Register new user",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/RegisterRequest")),
+     *     @OA\Response(response=201, description="Success", @OA\JsonContent(ref="#/components/schemas/AuthResponse")),
+     *     @OA\Response(response=422, description="Validation error", @OA\JsonContent(ref="#/components/schemas/Error"))
+     * )
      */
     Route::post('/register', [AuthController::class, 'register'])->name('register');
 
     /**
-     * Log in an existing user and receive access & refresh tokens.
-     * Method: POST
-     * Endpoint: /api/auth/login
-     * Access: Public
+     * @OA\Post(
+     *     path="/api/auth/login",
+     *     summary="Login user",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/LoginRequest")),
+     *     @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/AuthResponse")),
+     *     @OA\Response(response=401, description="Invalid credentials", @OA\JsonContent(ref="#/components/schemas/Error"))
+     * )
      */
     Route::post('/login', [AuthController::class, 'login'])->name('login');
 
     /**
-     * Log out the authenticated user.
-     * Invalidates the access token and removes the refresh token cookie.
-     * Method: POST
-     * Endpoint: /api/auth/logout
-     * Access: Authenticated (auth:api)
+     * @OA\Post(
+     *     path="/api/auth/logout",
+     *     summary="Logout user",
+     *     tags={"Authentication"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(response=200, description="Success", @OA\JsonContent(@OA\Property(property="message", type="string", example="Logged out"))),
+     *     @OA\Response(response=401, description="Unauthenticated", @OA\JsonContent(ref="#/components/schemas/Error"))
+     * )
      */
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
     /**
-     * Refresh access token using a valid refresh token (stored in cookie).
-     * Returns a new access token and refresh token.
-     * Method: POST
-     * Endpoint: /api/auth/refresh
-     * Access: Authenticated (auth:api)
+     * @OA\Post(
+     *     path="/api/auth/refresh",
+     *     summary="Refresh token",
+     *     tags={"Authentication"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/AuthResponse")),
+     *     @OA\Response(response=401, description="Invalid token", @OA\JsonContent(ref="#/components/schemas/Error"))
+     * )
      */
     Route::post('/refresh', [AuthController::class, 'refresh'])
-        ->middleware(['auth:api', EnsureTokenIsValid::class.':refresh'])->name('refresh');
+        ->middleware(['api', EnsureTokenIsValid::class.':refresh'])->name('refresh');
 
     /**
-     * Get the currently authenticated user's data.
-     * Method: GET
-     * Endpoint: /api/auth/user
-     * Access: Authenticated (auth:api)
+     * @OA\Get(
+     *     path="/api/auth/user",
+     *     summary="Get authenticated user",
+     *     tags={"Authentication"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/User")),
+     *     @OA\Response(response=401, description="Unauthenticated", @OA\JsonContent(ref="#/components/schemas/Error"))
+     * )
      */
     Route::get('/user', [AuthController::class, 'user'])
         ->middleware(['auth:api',EnsureTokenIsValid::class.':access'])->name('user');
@@ -72,66 +163,127 @@ Route::group([
 |--------------------------------------------------------------------------
 | Product API Routes
 |--------------------------------------------------------------------------
-|
-| All routes are grouped using the 'auth:api' middleware.
-| These endpoints handle CRUD operations for the products.
-| And get the categories and products in that category.
 */
-Route::middleware('auth:api')->group(function () {
+Route::middleware('api')->group(function () {
     /**
-     * Get the Products
-     * Method: GET
-     * Endpoint: /api/products
+     * @OA\Get(
+     *     path="/api/products",
+     *     summary="List products",
+     *     tags={"Products"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="page", in="query", @OA\Schema(type="integer", default=1)),
+     *     @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ProductListResponse")),
+     *     @OA\Response(response=401, description="Unauthenticated", @OA\JsonContent(ref="#/components/schemas/Error"))
+     * )
      */
     Route::get('/products', [ProductController::class, 'index']);
+
     /**
-     * Search by given name and return the products
-     * Method: GET
-     * Endpoint: /api/products/search
+     * @OA\Get(
+     *     path="/api/products/search",
+     *     summary="Search products",
+     *     tags={"Products"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="q", in="query", required=true, @OA\Schema(type="string")),
+     *     @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ProductListResponse")),
+     *     @OA\Response(response=401, description="Unauthenticated", @OA\JsonContent(ref="#/components/schemas/Error"))
+     * )
      */
     Route::get('/products/search', [ProductController::class, 'search']);
-    /**
-     * Get the list of categories
-     * Method: GET
-     * Endpoint: /api/products/category-list
-     */
-    Route::get('/products/category-list', [ProductController::class, 'categoryList']);
-    /**
-     * Get the categories
-     * Method: GET
-     * Endpoint: /api/products/categories
-     */
-    Route::get('/products/categories', [ProductController::class, 'categories']);
-    /**
-     * Get the Products by given category
-     * Method: GET
-     * Endpoint: /api/products/category/{Category_Name}
-     */
-    Route::get('/products/category/{category}', [ProductController::class, 'categoryProducts']);
 
     /**
-     * Add a new product by given attributes
-     * Method: POST
-     * Endpoint: /api/products/add
+     * @OA\Get(
+     *     path="/api/category-list",
+     *     summary="List categories",
+     *     tags={"Products"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/CategoryListResponse")),
+     *     @OA\Response(response=401, description="Unauthenticated", @OA\JsonContent(ref="#/components/schemas/Error"))
+     * )
+     */
+    Route::get('/category-list', [ProductController::class, 'categoryList']);
+
+    /**
+     * @OA\Get(
+     *     path="/api/categories",
+     *     summary="Get categories",
+     *     tags={"Products"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/CategoryListResponse")),
+     *     @OA\Response(response=401, description="Unauthenticated", @OA\JsonContent(ref="#/components/schemas/Error"))
+     * )
+     */
+    Route::get('/categories', [ProductController::class, 'categories']);
+
+    /**
+     * @OA\Get(
+     *     path="/api/category/{category}",
+     *     summary="Products by category",
+     *     tags={"Products"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="category", in="path", required=true, @OA\Schema(type="string", example="Electronics")),
+     *     @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ProductListResponse")),
+     *     @OA\Response(response=404, description="Not found", @OA\JsonContent(ref="#/components/schemas/Error")),
+     *     @OA\Response(response=401, description="Unauthenticated", @OA\JsonContent(ref="#/components/schemas/Error"))
+     * )
+     */
+    Route::get('/category/{category}', [ProductController::class, 'categoryProducts']);
+
+    /**
+     * @OA\Post(
+     *     path="/api/products/add",
+     *     summary="Create product",
+     *     tags={"Products"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/ProductRequest")),
+     *     @OA\Response(response=201, description="Success", @OA\JsonContent(ref="#/components/schemas/Product")),
+     *     @OA\Response(response=422, description="Validation error", @OA\JsonContent(ref="#/components/schemas/Error")),
+     *     @OA\Response(response=401, description="Unauthenticated", @OA\JsonContent(ref="#/components/schemas/Error"))
+     * )
      */
     Route::post('/products/add', [ProductController::class, 'store']);
+
     /**
-     * Get the Product by given id
-     * Method: GET
-     * Endpoint: /api/products/{product_id}
+     * @OA\Get(
+     *     path="/api/products/{id}",
+     *     summary="Get product by ID",
+     *     tags={"Products"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/Product")),
+     *     @OA\Response(response=404, description="Not found", @OA\JsonContent(ref="#/components/schemas/Error")),
+     *     @OA\Response(response=401, description="Unauthenticated", @OA\JsonContent(ref="#/components/schemas/Error"))
+     * )
      */
     Route::get('/products/{id}', [ProductController::class, 'show']);
+
     /**
-     * update the product by given Product id
-     * Method: PUT
-     * Endpoint: /api/products/{product_id}
+     * @OA\Put(
+     *     path="/api/products/{id}",
+     *     summary="Update product",
+     *     tags={"Products"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/ProductRequest")),
+     *     @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/Product")),
+     *     @OA\Response(response=404, description="Not found", @OA\JsonContent(ref="#/components/schemas/Error")),
+     *     @OA\Response(response=422, description="Validation error", @OA\JsonContent(ref="#/components/schemas/Error")),
+     *     @OA\Response(response=401, description="Unauthenticated", @OA\JsonContent(ref="#/components/schemas/Error"))
+     * )
      */
     Route::put('/products/{id}', [ProductController::class, 'update']);
+
     /**
-     * SoftDelete the Product by given id
-     * Method: DELETE
-     * Endpoint: /api/products/{product_id}
+     * @OA\Delete(
+     *     path="/api/products/{id}",
+     *     summary="Delete product",
+     *     tags={"Products"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Success", @OA\JsonContent(@OA\Property(property="message", type="string", example="Deleted"))),
+     *     @OA\Response(response=404, description="Not found", @OA\JsonContent(ref="#/components/schemas/Error")),
+     *     @OA\Response(response=401, description="Unauthenticated", @OA\JsonContent(ref="#/components/schemas/Error"))
+     * )
      */
     Route::delete('/products/{id}', [ProductController::class, 'destroy']);
-
 });

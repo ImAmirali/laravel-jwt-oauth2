@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CheckDBConnection;
 use App\Http\Middleware\EnsureTokenIsValid;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -15,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->group('api', [CheckDBConnection::class]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (AuthenticationException $e, Request $request) {
@@ -26,3 +27,4 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
     })->create();
+
